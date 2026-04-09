@@ -2,14 +2,14 @@
 // Fetches road segments within a polygon from the OpenStreetMap API.
 // Ways are split at junction nodes to produce individual drivable segments.
 
-type Coordition = [lat: number, lon: number];
+type Coorditate = [lat: number, lon: number];
 
 interface RoadSegment {
   wayId: number;
   name: string | null;
   highway: string;
   segmentIndex: number;
-  nodes: Coordition[];
+  nodes: Coorditate[];
 }
 
 interface OsmNode {
@@ -32,7 +32,7 @@ interface OsmApiResponse {
 }
 
 // First, check validation of input
-function pointInPolygon(point: Coordition, polygon: Coordition[]): boolean {
+function pointInPolygon(point: Coorditate, polygon: Coorditate[]): boolean {
   const [lat, lon] = point;
   let inside = false;
 
@@ -50,7 +50,7 @@ function pointInPolygon(point: Coordition, polygon: Coordition[]): boolean {
 }
 
 
-async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
+async function getRoadSegments(polygon: Coorditate[]): Promise<RoadSegment[]> {
   const lats = polygon.map(([lat]) => lat);
   const lons = polygon.map(([, lon]) => lon);
 //  Secondly, put the pylogin in a box because OSM API only accepts a bounding box
@@ -75,12 +75,12 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
   const data: OsmApiResponse = await response.json();
 
 //  And then, seperate the data into nodes and ways, and build a map of node IDs to their coordinates for easy lookup when processing the ways.
-  const nodeCoorditions = new Map<number, Coordition>();
+  const nodeCoorditates = new Map<number, Coorditate>();
   // Now I understand why you said the response it large, I did not know that the response include both node and ways.
   for (const roadData of data.elements) {
     if (roadData.type === "node") {
       const { id, lat, lon } = roadData as OsmNode;
-      nodeCoorditions.set(id, [lat, lon]);
+      nodeCoorditates.set(id, [lat, lon]);
     }
   }
 
@@ -104,15 +104,15 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
     const name = way.tags?.name ?? null;
     const highway = way.tags!.highway;
 
-    let currentSegment: Coordition[] = [];
+    let currentSegment: Coorditate[] = [];
     let segmentIndex = 0;
 
     for (let i = 0; i < way.nodes.length; i++) {
       const nodeId = way.nodes[i];
-      const Coordition = nodeCoorditions.get(nodeId);
-      if (Coordition === undefined) continue;
+      const Coorditate = nodeCoorditates.get(nodeId);
+      if (Coorditate === undefined) continue;
 
-      currentSegment.push(Coordition);
+      currentSegment.push(Coorditate);
 
       const isLastNode = i === way.nodes.length - 1;
       const isJunction = junctionNodes.has(nodeId);
@@ -126,7 +126,7 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
           nodes: [...currentSegment],
         });
         segmentIndex++;
-        currentSegment = [Coordition];
+        currentSegment = [Coorditate];
       }
     }
   }
@@ -135,7 +135,7 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
 }
 
 // sample data here
-const stockholmBlock: Coordition[] = [
+const stockholmBlock: Coorditate[] = [
   [59.330, 18.065],
   [59.335, 18.065],
   [59.335, 18.075],
