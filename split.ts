@@ -76,7 +76,7 @@ async function getRoadSegments(polygon: Coorditate[]): Promise<RoadSegment[]> {
 
 //  And then, seperate the data into nodes and ways, and build a map of node IDs to their coordinates for easy lookup when processing the ways.
   const nodeCoorditates = new Map<number, Coorditate>();
-  // Now I understand why you said the response it large, I did not know that the response include both node and ways.
+  // ps: Now I understand why you said the response it large, I did not know that the response include both node and ways.
   for (const roadData of data.elements) {
     if (roadData.type === "node") {
       const { id, lat, lon } = roadData as OsmNode;
@@ -91,6 +91,7 @@ async function getRoadSegments(polygon: Coorditate[]): Promise<RoadSegment[]> {
 
   const seenInWay = new Set<number>();
   const junctionNodes = new Set<number>();
+  // ps: Here, I am using two hashset to find the intersection, each data will be checked once, so the complexity is O(n).
   for (const way of ways) {
     for (const nodeId of way.nodes) {
       if (seenInWay.has(nodeId)) junctionNodes.add(nodeId);
@@ -99,7 +100,7 @@ async function getRoadSegments(polygon: Coorditate[]): Promise<RoadSegment[]> {
   }
 
   const segments: RoadSegment[] = [];
-// and the end, segment the ways into segments based on junction nodes and way endpoints. Each segment is represented as a RoadSegment object containing the way ID, name, highway type, segment index, and an array of node coordinates. The function returns an array of these segments that fall within the specified polygon.
+// At the end, segment the ways into segments based on junction nodes and way endpoints. Each segment is represented as a RoadSegment object containing the way ID, name, highway type, segment index, and an array of node coordinates. The function returns an array of these segments that fall within the specified polygon.
   for (const way of ways) {
     const name = way.tags?.name ?? null;
     const highway = way.tags!.highway;
