@@ -31,6 +31,7 @@ interface OsmApiResponse {
   elements: OsmElement[];
 }
 
+// First, check validation of input
 function pointInPolygon(point: Coordition, polygon: Coordition[]): boolean {
   const [lat, lon] = point;
   let inside = false;
@@ -48,10 +49,11 @@ function pointInPolygon(point: Coordition, polygon: Coordition[]): boolean {
   return inside;
 }
 
+
 async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
   const lats = polygon.map(([lat]) => lat);
   const lons = polygon.map(([, lon]) => lon);
-//   OSM API only accepts a bounding box, so I need to put the pylogin in a box§
+//  Secondly, put the pylogin in a box because OSM API only accepts a bounding box
   const bbox = [
     Math.min(...lons), // left   – minLon
     Math.min(...lats), // bottom – minLat
@@ -59,7 +61,7 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
     Math.max(...lats), // top    – maxLat
   ].join(",");
 
-// get sponse from OSM API
+// Then, get response from OSM API
   const url = `https://api.openstreetmap.org/api/0.6/map?bbox=${bbox}`;
   const response = await fetch(url, {
     headers: { Accept: "application/json" },
@@ -72,18 +74,19 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
   }
   const data: OsmApiResponse = await response.json();
 
-//   seperate the data into nodes and ways, and build a map of node IDs to their coordinates for easy lookup when processing the ways.
+//  And then, seperate the data into nodes and ways, and build a map of node IDs to their coordinates for easy lookup when processing the ways.
   const nodeCoorditions = new Map<number, Coordition>();
-  for (const el of data.elements) {
-    if (el.type === "node") {
-      const { id, lat, lon } = el as OsmNode;
+  // Now I understand why you said the response it large, I did not know that the response include both node and ways.
+  for (const roadData of data.elements) {
+    if (roadData.type === "node") {
+      const { id, lat, lon } = roadData as OsmNode;
       nodeCoorditions.set(id, [lat, lon]);
     }
   }
 
   const ways = (data.elements as OsmElement[]).filter(
-    (el): el is OsmWay =>
-      el.type === "way" && (el as OsmWay).tags?.highway !== undefined
+    (roadData): roadData is OsmWay =>
+      roadData.type === "way" && (roadData as OsmWay).tags?.highway !== undefined
   );
 
   const seenInWay = new Set<number>();
@@ -96,7 +99,7 @@ async function getRoadSegments(polygon: Coordition[]): Promise<RoadSegment[]> {
   }
 
   const segments: RoadSegment[] = [];
-// segment the ways into segments based on junction nodes and way endpoints. Each segment is represented as a RoadSegment object containing the way ID, name, highway type, segment index, and an array of node coordinates. The function returns an array of these segments that fall within the specified polygon.
+// and the end, segment the ways into segments based on junction nodes and way endpoints. Each segment is represented as a RoadSegment object containing the way ID, name, highway type, segment index, and an array of node coordinates. The function returns an array of these segments that fall within the specified polygon.
   for (const way of ways) {
     const name = way.tags?.name ?? null;
     const highway = way.tags!.highway;
